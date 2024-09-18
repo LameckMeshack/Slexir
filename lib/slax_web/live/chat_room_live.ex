@@ -1,5 +1,5 @@
 defmodule SlaxWeb.ChatRoomLive do
-  alias Slax.Repo
+  alias Slax.Chat
   alias Slax.Chat.Room
 
   use SlaxWeb, :live_view
@@ -63,9 +63,7 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def mount(_params, _session, socket) do
-    rooms = Repo.all(Room)
-
-
+    rooms = Chat.list_rooms()
 
     {:ok, assign(socket, rooms: rooms)}
   end
@@ -74,14 +72,13 @@ defmodule SlaxWeb.ChatRoomLive do
     room =
       case Map.fetch(params, "room_id") do
         {:ok, id} ->
-          Repo.get!(Room, id)
+          Chat.get_room!(id)
 
         :error ->
           List.first(socket.assign.rooms)
       end
 
-      {:noreply, assign( socket, room: room,  hide_topic?: false)}
-
+    {:noreply, assign(socket, room: room, hide_topic?: false)}
   end
 
   def handle_event("toggle-topic", _params, socket) do

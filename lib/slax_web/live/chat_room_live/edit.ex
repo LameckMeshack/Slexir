@@ -19,7 +19,7 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
       </.header>
       <.simple_form for={@form} id="room-form" phx-change="validate-room" phx-submit="save-room">
         <.input field={@form[:name]} type="text" label="Name" />
-        <.input field={@form[:topis]} type="text" label="Topic" />
+        <.input field={@form[:topic]} type="text" label="Topic" />
         <:actions>
           <.button phx-disable-with="Saving...." class="w-full">Save</.button>
         </:actions>
@@ -41,27 +41,25 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
 
   def handle_event("validate-room", %{"room" => room_params}, socket) do
     changeset =
-    socket.assigns.room
+      socket.assigns.room
       |> Chat.change_room(room_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("save-room", %{"room"=> room_params}, socket) do
-
+  def handle_event("save-room", %{"room" => room_params}, socket) do
     case Chat.update_room(socket.assigns.room, room_params) do
       {:ok, room} ->
         {:noreply,
-        socket
-          |> put_flash(:info, "Room updated successfully")
-          |> push_navigate(to: ~p"/rooms/#{room}")}
+         socket
+         |> put_flash(:info, "Room updated successfully")
+         |> push_navigate(to: ~p"/rooms/#{room}")}
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign_form(socket, changeset)}
-        end
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign_form(socket, changeset)}
     end
-
+  end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

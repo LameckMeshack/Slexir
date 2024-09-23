@@ -28,6 +28,12 @@ defmodule SlaxWeb.ChatRoomLive do
         <div class="flex flex-col gap-1.5">
           <h1 class="text-sm font-bold leading-none">
             #<%= @room.name %>
+            <.link
+              class="font-normal text-xs text-blue-600 hover:text-blue-700"
+              navigate={~p"/rooms/#{@room}/edit"}
+            >
+              Edit
+            </.link>
           </h1>
           <div class="text-xs leading-none h-3.5" phx-click="toggle-topic">
             <%= if @hide_topic? do %>
@@ -75,7 +81,7 @@ defmodule SlaxWeb.ChatRoomLive do
           Chat.get_room!(id)
 
         :error ->
-          List.first(socket.assign.rooms)
+          List.first(socket.assigns.rooms)
       end
 
     {:noreply, assign(socket, room: room, hide_topic?: false, page_title: "#" <> room.name)}

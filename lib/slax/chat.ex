@@ -36,12 +36,12 @@ defmodule Slax.Chat do
     |> Repo.update()
   end
 
-
   # Messages
   def list_messages_in_room(%Room{id: room_id}) do
     Message
-      |> where([m], m.room_id == ^room_id)
-      |> order_by([m], asc: :inserted_at, asc: :id)
-      |> Repo.all()
+    |> where([m], m.room_id == ^room_id)
+    |> order_by([m], asc: :inserted_at, asc: :id)
+    |> preload(:user)
+    |> Repo.all()
   end
 end

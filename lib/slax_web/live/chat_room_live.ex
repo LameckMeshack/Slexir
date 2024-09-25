@@ -44,9 +44,9 @@ defmodule SlaxWeb.ChatRoomLive do
           </div>
         </div>
       </div>
-       <div class="flex flex-col flex-grow overflow-auto">
+      <div class="flex flex-col flex-grow overflow-auto">
         <.message :for={message <- @messages} message={message} />
-     </div>
+      </div>
     </div>
     """
   end
@@ -71,25 +71,27 @@ defmodule SlaxWeb.ChatRoomLive do
     """
   end
 
+  attr :message, Message, required: true
 
-attr :message, Message, required: true
-
- defp message(assigns) do
-   ~H"""
-   <div class="relative flex px-4 py-3">
-     <div class="h-10 w-10 rounded flex-shrink-0 bg-slate-300"></div>
-     <div class="ml-2">
-       <div class="-mt-1">
-         <.link class="text-sm font-semibold hover:underline">
-           <span>User</span>
-         </.link>
-         <p class="text-sm"><%= @message.body %></p>
-       </div>
-     </div>
-   </div>
-   """
+  defp message(assigns) do
+    ~H"""
+    <div class="relative flex px-4 py-3">
+      <div class="h-10 w-10 rounded flex-shrink-0 bg-slate-300"></div>
+      <div class="ml-2">
+        <div class="-mt-1">
+          <.link class="text-sm font-semibold hover:underline">
+            <span><%= username(@message.user) %></span>
+          </.link>
+          <p class="text-sm"><%= @message.body %></p>
+        </div>
+      </div>
+    </div>
+    """
   end
 
+  defp username(user) do
+    user.email |> String.split("@") |> List.first() |> String.capitalize()
+  end
 
   def mount(_params, _session, socket) do
     rooms = Chat.list_rooms()
@@ -107,9 +109,15 @@ attr :message, Message, required: true
           List.first(socket.assigns.rooms)
       end
 
-      messages = Chat.list_messages_in_room(room)
+    messages = Chat.list_messages_in_room(room)
 
-    {:noreply, assign(socket, room: room, hide_topic?: false, page_title: "#" <> room.name, messages: messages)}
+    {:noreply,
+     assign(socket,
+       room: room,
+       hide_topic?: false,
+       page_title: "#" <> room.name,
+       messages: messages
+     )}
   end
 
   def handle_event("toggle-topic", _params, socket) do

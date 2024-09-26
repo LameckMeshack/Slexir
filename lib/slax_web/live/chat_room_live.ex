@@ -54,7 +54,7 @@ defmodule SlaxWeb.ChatRoomLive do
           timezone={@timezone}
         />
       </div>
-      <div class="h-12 bg-white px-4 pb-4">
+      <div class="h-12 bg-white px-4 pb-24">
         <.form
           for={@new_message_form}
           id="new-message-form"

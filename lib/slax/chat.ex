@@ -1,6 +1,5 @@
 defmodule Slax.Chat do
-  alias Slax.Chat.Room
-  alias Slax.Chat.Message
+   alias Slax.Chat.{Message, Room, RoomMembership}
   alias Slax.Accounts.User
   alias Slax.Repo
 

@@ -2,6 +2,8 @@ defmodule SlaxWeb.ChatRoomLive do
   alias Slax.Chat
   alias Slax.Chat.{Room, Message}
   alias Slax.Accounts.User
+  alias Slax.Accounts
+  alias SlaxWeb.OnlineUsers
 
   use SlaxWeb, :live_view
 
@@ -22,8 +24,23 @@ defmodule SlaxWeb.ChatRoomLive do
         <div id="rooms-list">
           <.room_link :for={room <- @rooms} room={room} active={room.id == @room.id} />
         </div>
+        <div class="mt-4">
+          <div class="flex items-center h-8 px-3 group">
+            <div class="flex items-center flex-grow focus:outline-none">
+              <span class="ml-2 leading-none font-medium text-sm">Users</span>
+            </div>
+          </div>
+          <div id="users-list">
+            <.user
+              :for={user <- @users}
+              user={user}
+              online={OnlineUsers.online?(@online_users, user.id)}
+            />
+          </div>
+        </div>
       </div>
     </div>
+
     <div class="flex flex-col flex-grow shadow-lg">
       <div class="flex justify-between items-center flex-shrink-0 h-16 bg-white border-b border-slate-300 px-4">
         <div class="flex flex-col gap-1.5">
@@ -45,6 +62,7 @@ defmodule SlaxWeb.ChatRoomLive do
           </div>
         </div>
       </div>
+
       <div
         class="flex flex-col flex-grow overflow-auto"
         id="messages-list"
@@ -74,7 +92,7 @@ defmodule SlaxWeb.ChatRoomLive do
             name={@new_message_form[:body].name}
             placeholder={"Message ##{@room.name}"}
             phx-debounce
-             phx-hook="ChatMessageTextarea"
+            phx-hook="ChatMessageTextarea"
             rows="1"
           ><%= Phoenix.HTML.Form.normalize_value("textarea", @new_message_form[:body].value) %></textarea>
           <button class="flex-shrink flex items-center justify-center h-6 w-6 rounded hover:bg-slate-200">
@@ -149,12 +167,39 @@ defmodule SlaxWeb.ChatRoomLive do
     user.email |> String.split("@") |> List.first() |> String.capitalize()
   end
 
+  attr :user, User, required: true
+  attr :online, :boolean, default: false
+
+  defp user(assigns) do
+    ~H"""
+    <.link class="flex items-center h-8 hover:bg-gray-300 text-sm pl-8 pr-3" href="#">
+      <div class="flex justify-center w-4">
+        <%= if @online do %>
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+        <% else %>
+          <span class="w-2 h-2 rounded-full border-2 border-gray-500"></span>
+        <% end %>
+      </div>
+      <span class="ml-2 leading-none"><%= username(@user) %></span>
+    </.link>
+    """
+  end
+
   def mount(_params, _session, socket) do
     rooms = Chat.list_rooms()
+    users = Accounts.list_users()
 
     timezone = get_connect_params(socket)["timezone"]
 
-    {:ok, assign(socket, rooms: rooms, timezone: timezone)}
+    if connected?(socket) do
+      OnlineUsers.track(self(), socket.assigns.current_user)
+    end
+
+    OnlineUsers.subscribe()
+
+    {:ok,
+     assign(socket, rooms: rooms, users: users, timezone: timezone)
+     |> assign(online_users: OnlineUsers.list())}
   end
 
   def handle_params(params, _session, socket) do
@@ -224,6 +269,12 @@ defmodule SlaxWeb.ChatRoomLive do
 
   def handle_info({:message_deleted, message}, socket) do
     {:noreply, stream_delete(socket, :messages, message)}
+  end
+
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    online_users = OnlineUsers.update(socket.assigns.online_users, diff)
+
+    {:noreply, assign(socket, online_users: online_users)}
   end
 
   defp assign_message_form(socket, changeset) do

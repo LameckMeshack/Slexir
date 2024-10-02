@@ -67,7 +67,7 @@ defmodule Slax.Chat do
 
     Repo.delete(message)
 
-        Phoenix.PubSub.broadcast!(@pubsub, topic(message.room_id), {:message_deleted, message})
+    Phoenix.PubSub.broadcast!(@pubsub, topic(message.room_id), {:message_deleted, message})
   end
 
   def subscribe_to_room(room) do

@@ -45,7 +45,12 @@ defmodule SlaxWeb.ChatRoomLive do
           </div>
         </div>
       </div>
-      <div class="flex flex-col flex-grow overflow-auto" id="messages-list" phx-update="stream">
+      <div
+        class="flex flex-col flex-grow overflow-auto"
+        id="messages-list"
+        phx-update="stream"
+        phx-hook="RoomMessages"
+      >
         <.message
           :for={{dom_id, message} <- @streams.messages}
           dom_id={dom_id}
@@ -69,6 +74,7 @@ defmodule SlaxWeb.ChatRoomLive do
             name={@new_message_form[:body].name}
             placeholder={"Message ##{@room.name}"}
             phx-debounce
+             phx-hook="ChatMessageTextarea"
             rows="1"
           ><%= Phoenix.HTML.Form.normalize_value("textarea", @new_message_form[:body].value) %></textarea>
           <button class="flex-shrink flex items-center justify-center h-6 w-6 rounded hover:bg-slate-200">
@@ -174,7 +180,8 @@ defmodule SlaxWeb.ChatRoomLive do
        page_title: "#" <> room.name
      )
      |> stream(:messages, messages, reset: true)
-     |> assign_message_form(Chat.change_message(%Message{}))}
+     |> assign_message_form(Chat.change_message(%Message{}))
+     |> push_event("scroll_messages_to_bottom", %{})}
   end
 
   def handle_event("toggle-topic", _params, socket) do
@@ -185,7 +192,6 @@ defmodule SlaxWeb.ChatRoomLive do
     changeset = Chat.change_message(%Message{}, message_params)
     {:noreply, assign_message_form(socket, changeset)}
   end
-
 
   def handle_event("submit-message", %{"message" => message_params}, socket) do
     %{current_user: current_user, room: room} = socket.assigns
@@ -207,8 +213,13 @@ defmodule SlaxWeb.ChatRoomLive do
     {:noreply, socket}
   end
 
-      def handle_info({:new_message, message}, socket) do
-    {:noreply, stream_insert(socket, :messages, message)}
+  def handle_info({:new_message, message}, socket) do
+    socket =
+      socket
+      |> stream_insert(:messages, message)
+      |> push_event("scroll_messages_to_bottom", %{})
+
+    {:noreply, socket}
   end
 
   def handle_info({:message_deleted, message}, socket) do

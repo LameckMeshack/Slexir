@@ -45,7 +45,8 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
         |> put_flash(:error, "Permission denied")
         |> push_navigate(to: ~p"/")
       end
-      {:ok, socket}
+
+    {:ok, socket}
   end
 
   def handle_event("validate-room", %{"room" => room_params}, socket) do

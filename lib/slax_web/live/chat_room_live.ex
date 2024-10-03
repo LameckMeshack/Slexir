@@ -86,13 +86,21 @@ defmodule SlaxWeb.ChatRoomLive do
         phx-update="stream"
         phx-hook="RoomMessages"
       >
-        <.message
-          :for={{dom_id, message} <- @streams.messages}
-          dom_id={dom_id}
-          message={message}
-          current_user={@current_user}
-          timezone={@timezone}
-        />
+        <%= for {dom_id, message} <- @streams.messages do %>
+          <%= if message == :unread_marker do %>
+            <div id={dom_id} class="w-full flex text-red-500 items-center gap-3 pr-5">
+              <div class="w-full h-px grow bg-red-500"></div>
+              <div class="text-sm">New</div>
+            </div>
+          <% else %>
+            <.message
+              current_user={@current_user}
+              dom_id={dom_id}
+              message={message}
+              timezone={@timezone}
+            />
+          <% end %>
+        <% end %>
       </div>
       <div class="h-12 bg-white px-4 pb-24">
         <.form
@@ -243,9 +251,18 @@ defmodule SlaxWeb.ChatRoomLive do
 
     OnlineUsers.subscribe()
 
-    {:ok,
-     assign(socket, rooms: rooms, users: users, timezone: timezone)
-     |> assign(online_users: OnlineUsers.list())}
+    socket =
+      socket
+      |> assign(rooms: rooms, users: users, timezone: timezone)
+      |> assign(online_users: OnlineUsers.list())
+      |> stream_configure(:messages,
+        dom_id: fn
+          %Message{id: id} -> "messages-#{id}"
+          :unread_marker -> "messages-unread-marker"
+        end
+      )
+
+    {:ok, socket}
   end
 
   def handle_params(params, _session, socket) do
@@ -260,9 +277,16 @@ defmodule SlaxWeb.ChatRoomLive do
           List.first(socket.assigns.rooms)
       end
 
-    messages = Chat.list_messages_in_room(room)
-
     Chat.subscribe_to_room(room)
+
+    last_read_id = Chat.get_last_read_id(room, socket.assigns.current_user)
+
+    messages =
+      room
+      |> Chat.list_messages_in_room()
+      |> maybe_insert_unread_marker(last_read_id)
+
+    Chat.update_last_read_id(room, socket.assigns.current_user)
 
     {:noreply,
      assign(socket,
@@ -318,6 +342,12 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def handle_info({:new_message, message}, socket) do
+
+    IO.inspect(message, label: "MESSAGE STRUCTURE")
+
+        if message.room_id == socket.assigns.room.id do
+      Chat.update_last_read_id(message.room, socket.assigns.current_user)
+    end
     socket =
       socket
       |> stream_insert(:messages, message)
@@ -338,5 +368,17 @@ defmodule SlaxWeb.ChatRoomLive do
 
   defp assign_message_form(socket, changeset) do
     assign(socket, :new_message_form, to_form(changeset))
+  end
+
+  defp maybe_insert_unread_marker(messages, nil), do: messages
+
+  defp maybe_insert_unread_marker(messages, last_read_id) do
+    {read, unread} = Enum.split_while(messages, &(&1.id <= last_read_id))
+
+    if unread == [] do
+      read
+    else
+      read ++ [:unread_marker | unread]
+    end
   end
 end

@@ -31,8 +31,6 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
   def mount(%{"room_id" => id}, _session, socket) do
     room = Chat.get_room!(id)
 
-    changeset = Chat.change_room(room)
-
     socket =
       if Chat.joined?(room, socket.assigns.current_user) do
         changeset = Chat.change_room(room)

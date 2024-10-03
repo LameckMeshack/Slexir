@@ -342,12 +342,10 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def handle_info({:new_message, message}, socket) do
-
-    IO.inspect(message, label: "MESSAGE STRUCTURE")
-
-        if message.room_id == socket.assigns.room.id do
+    if message.room_id == socket.assigns.room.id do
       Chat.update_last_read_id(message.room, socket.assigns.current_user)
     end
+
     socket =
       socket
       |> stream_insert(:messages, message)

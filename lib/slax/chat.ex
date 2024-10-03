@@ -1,11 +1,18 @@
 defmodule Slax.Chat do
-   alias Slax.Chat.{Message, Room, RoomMembership}
+  alias Slax.Chat.{Message, Room, RoomMembership}
   alias Slax.Accounts.User
   alias Slax.Repo
 
   import Ecto.Query
 
   @pubsub Slax.PubSub
+
+  def list_joined_rooms(%User{} = user) do
+    user
+    |> Repo.preload(:rooms)
+    |> Map.fetch!(:rooms)
+    |> Enum.sort_by(& &1.name)
+  end
 
   def get_first_room! do
     # q  = from(r in Room, limit: 1, order_by: [asc: :name])
@@ -81,5 +88,11 @@ defmodule Slax.Chat do
 
   def join_room!(room, user) do
     Repo.insert!(%RoomMembership{room: room, user: user})
+  end
+
+  def joined?(%Room{} = room, %User{} = user) do
+    Repo.exists?(
+      from rm in RoomMembership, where: rm.room_id == ^room.id and rm.user_id == ^user.id
+    )
   end
 end

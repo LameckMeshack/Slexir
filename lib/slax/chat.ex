@@ -8,12 +8,12 @@ defmodule Slax.Chat do
 
   @pubsub Slax.PubSub
 
-  def list_joined_rooms(%User{} = user) do
-    user
-    |> Repo.preload(:rooms)
-    |> Map.fetch!(:rooms)
-    |> Enum.sort_by(& &1.name)
-  end
+  # def list_joined_rooms(%User{} = user) do
+  #   user
+  #   |> Repo.preload(:rooms)
+  #   |> Map.fetch!(:rooms)
+  #   |> Enum.sort_by(& &1.name)
+  # end
 
   def list_rooms_with_joined(%User{} = user) do
     query =
@@ -24,6 +24,19 @@ defmodule Slax.Chat do
         order_by: [asc: :name]
 
     Repo.all(query)
+  end
+
+  def list_joined_rooms_with_unread_counts(%User{} = user) do
+    from(room in Room,
+      join: membership in assoc(room, :memberships),
+      where: membership.user_id == ^user.id,
+      left_join: message in assoc(room, :messages),
+      on: message.id > membership.last_read_id,
+      group_by: room.id,
+      select: {room, count(message.id)},
+      order_by: [asc: room.name]
+    )
+    |> Repo.all()
   end
 
   def get_first_room! do
